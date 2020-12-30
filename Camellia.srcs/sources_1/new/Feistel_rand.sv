@@ -3,14 +3,13 @@
 //questo blocco utilizza la F_function che ha sua volta riceve in ingresso le chiavi
 //ma alcune sono generate da KA che viene generato in questo blocco.
 //devo quindi fare in modo che questo blocco abbia due funzionalità
-module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
-	input KA_gen;
-	input start;
+module Feistel_rand(init, in, out, next, KL, clk, valid);
+	input init;
 	input clk;
 	input [0:127] in;
+	input [0:127] KL;
 	output [0:127] out;
-	input [0:127] KA;   //input key per i round blocks
-	input [0:127] KL;  //input key da 128 bit per quando le operazioni sono in parallelo
+	input next;   //input key per i round blocks
 //	output [0:127] KA_out;
 	output valid;
 	
@@ -39,6 +38,7 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 	logic [0:63] single_K;
 	
 	logic valid_s;
+	logic valid_KA;
 	logic valid_reg;
 	
 	assign valid =valid_reg;
@@ -57,13 +57,23 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 	
 	always@(posedge clk)
 	begin
-		KA_reg<=KA_comb;
-		KL_reg<=KL_comb;
+		if (valid_KA)
+			KA_reg<={sx_comb,dx_comb};
+		else
+			KA_reg<=KA_comb;
+	end
+	
+	always@(posedge clk)
+	begin
+		if (init)
+			KL_reg<=in;
+		else
+			KL_reg<=KL_comb;
 	end
 	
 	
 	
-	always@(start, PS, round, Fout, in, KA_gen, sx, dx, FLout, IFLout, dual_K, single_K)
+	always@(PS, round, Fout, in, init, next, sx, dx, FLout, IFLout, dual_K, single_K)
 	begin
 		NS=PS;
 		FX='0;
@@ -73,22 +83,21 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 		IFLY='0;
 		IFLk='0;
 		valid_s=0;
+		valid_KA=0;
 		round_comb=5'd0;
 		dx_comb=0;
 		sx_comb=0;
 		out_temp=0;
 		case (PS)
 			idle: begin
-				if (start)
-				begin
-					case(KA_gen)
-						1: begin NS=KA_block; 
-							sx_comb=in[0:63]; 
-							dx_comb=in[64:127]; 
-						end
-						0: NS=CD_initial_xor;
-					endcase
+				if (init)
+				begin 
+					NS=KA_block; 
+					sx_comb=in[0:63]; 
+					dx_comb=in[64:127]; 
 				end
+				if (next)
+					NS=CD_initial_xor;
 				end
 			KA_block: begin
 				round_comb=round+1;
@@ -107,9 +116,8 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 				sx_comb=Fout^dx;
 				dx_comb=sx;		
 				if (round==3) begin
-					out_temp={sx_comb,dx_comb};
 					NS=idle;
-					valid_s=1;
+					valid_KA=1;
 				end							
 				end
 			KA_middle_xor: begin
@@ -163,8 +171,8 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 		dual_K=0;
 		case (PS)
 			CD_initial_xor: begin
-					dual_K=KL;
-					KL_comb={KL[15:127],KL[0:14]};
+					dual_K=KL_reg;
+					KL_comb={KL_reg[15:127],KL_reg[0:14]};
 					end
 			CD_FL: begin
 				if (round==6) begin
@@ -181,10 +189,10 @@ module Feistel_rand(start, KA_gen, in, out, KA, KL, clk, valid);
 				end
 			CD_block: begin
 				if (round==0)
-					single_K=KA[0:63];
+					single_K=KA_reg[0:63];
 				else if (round==1) begin
-					single_K=KA[64:127];
-					KA_comb={KA[15:127],KA[0:14]}; end
+					single_K=KA_reg[64:127];
+					KA_comb={KA_reg[15:127],KA_reg[0:14]}; end
 				else if (round==2)
 					single_K=KL_reg[0:63];
 				else if (round==3) begin
