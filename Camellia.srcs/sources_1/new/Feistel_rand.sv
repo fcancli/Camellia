@@ -57,18 +57,15 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 	
 	always@(posedge clk)
 	begin
-		if (valid_KA)
-			KA_reg<={sx_comb,dx_comb};
-		else
-			KA_reg<=KA_comb;
+		KA_reg<=KA_comb;
 	end
 	
 	always@(posedge clk)
 	begin
-		if (init)
-			KL_reg<=in;
-		else
-			KL_reg<=KL_comb;
+//		if (init)
+//			KL_reg<=in;
+//		else
+		KL_reg<=KL_comb;
 	end
 	
 	
@@ -85,6 +82,7 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 		valid_s=0;
 		valid_KA=0;
 		round_comb=5'd0;
+		
 		dx_comb=0;
 		sx_comb=0;
 		out_temp=0;
@@ -117,6 +115,7 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 				dx_comb=sx;		
 				if (round==3) begin
 					NS=idle;
+//					KA_comb={sx_comb,dx_comb};
 					valid_KA=1;
 				end							
 				end
@@ -169,7 +168,17 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 	begin
 		single_K=0;
 		dual_K=0;
+		KA_comb=KA_reg;
+		KL_comb=KL_reg;
 		case (PS)
+			idle: begin
+				if (init)
+					KL_comb=in;
+				end
+			KA_block: begin
+				if (round==3)
+					KA_comb={sx_comb,dx_comb};
+				end
 			CD_initial_xor: begin
 					dual_K=KL_reg;
 					KL_comb={KL_reg[15:127],KL_reg[0:14]};
@@ -235,8 +244,8 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 					single_K=KL_reg[64:127];
 				end				
 			default: begin
-				KA_comb=0;
-				KL_comb=0;
+				KA_comb=KA_reg;
+				KL_comb=KL_reg;
 				end
 		 endcase
 	end

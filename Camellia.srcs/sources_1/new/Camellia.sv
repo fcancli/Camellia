@@ -12,15 +12,14 @@ module Camellia_core(block, result, key, clk, EncOrDec, rst, init, next, ready, 
     output ready;
     output valid;
     
-    logic ready_s,valid_s;
+    logic ready_s;
     logic valid_feist;
-    logic start_feist;
-    logic KA_gen;
-    logic [4:0] round_feist;
-    logic [0:127] KA_feist=0;
-    logic [0:127] feist_in, feist_out, KL_feist=0;
-    logic [1:0] NS;
-    logic [1:0] PS=0;
+//    logic start_feist;
+//    logic KA_gen;
+//    logic [0:127] KA_feist=0;
+    logic [0:127] feist_out;
+//    logic [1:0] NS;
+//    logic [1:0] PS=0;
     localparam idle=0, KA_generation=1, key_scheduling=2, data_random=3;
     
     assign ready=ready_s;
