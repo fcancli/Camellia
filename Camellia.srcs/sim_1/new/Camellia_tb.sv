@@ -14,6 +14,9 @@ begin
 //	block=128'h67673138549669730857065648eabe43;
 	key=128'h0123456789abcdeffedcba9876543210;
 	EncOrDec=1;
+	@(posedge clk)
+	rst=1;
+	@(posedge clk)
 	rst=0;
 	init=0;
 	next=0;
