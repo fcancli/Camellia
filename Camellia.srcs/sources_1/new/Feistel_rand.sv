@@ -3,7 +3,7 @@
 //questo blocco utilizza la F_function che ha sua volta riceve in ingresso le chiavi
 //ma alcune sono generate da KA che viene generato in questo blocco.
 //devo quindi fare in modo che questo blocco abbia due funzionalità
-module Feistel_rand(init, in, out, next, KL, clk, valid);
+module Feistel_rand(init, in, out, next, KL, clk, valid, EncOrDec);
 	input init;
 	input clk;
 	input [0:127] in;
@@ -11,13 +11,13 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 	output [0:127] out;
 	input next;   //input key per i round blocks
 //	output [0:127] KA_out;
+	input EncOrDec;
 	output valid;
 	
 	localparam idle=0;
 //stati per la generazione dell KA
 	localparam KA_block=1;
 	localparam KA_middle_xor=2;
-//	localparam KA_second_block=3;
 	localparam KA_done=3;
 //stati per la crittazione/decrittazione
 	localparam CD_initial_xor=4;
@@ -27,13 +27,15 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 	
 	logic [2:0] NS;
 	logic [2:0] PS=0;
-	logic [4:0] round, round_comb;
+	logic [4:0] round, round_comb=0;
 	logic [0:63] sx, sx_comb, dx, dx_comb;
 	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout;
 	logic [0:127] out_s;
 	logic [0:127] out_temp;
-	logic [0:127] KA_reg, KA_comb;
-	logic [0:127] KL_reg, KL_comb;
+	logic [0:127] KA_reg=0;
+	logic [0:127] KL_reg=0;
+	logic [0:127] KA_15_sx, KA_15_dx, KA_17_sx, KA_17_dx;
+	logic [0:127] KL_15_sx, KL_15_dx, KL_17_sx, KL_17_dx;
 	logic [0:127] dual_K;
 	logic [0:63] single_K;
 	
@@ -54,21 +56,7 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 		out_s<=out_temp;
 		valid_reg<=valid_s;
 	end
-	
-	always@(posedge clk)
-	begin
-		KA_reg<=KA_comb;
-	end
-	
-	always@(posedge clk)
-	begin
-//		if (init)
-//			KL_reg<=in;
-//		else
-		KL_reg<=KL_comb;
-	end
-	
-	
+
 	
 	always@(PS, round, Fout, in, init, next, sx, dx, FLout, IFLout, dual_K, single_K)
 	begin
@@ -81,8 +69,7 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 		IFLk='0;
 		valid_s=0;
 		valid_KA=0;
-		round_comb=5'd0;
-		
+		round_comb=0;		
 		dx_comb=0;
 		sx_comb=0;
 		out_temp=0;
@@ -91,11 +78,13 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 				if (init)
 				begin 
 					NS=KA_block; 
-					sx_comb=in[0:63]; 
-					dx_comb=in[64:127]; 
+					sx_comb=KL[0:63]; 
+					dx_comb=KL[64:127]; 
 				end
 				if (next)
+				begin
 					NS=CD_initial_xor;
+				end
 				end
 			KA_block: begin
 				round_comb=round+1;
@@ -109,19 +98,17 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 				end
 				else if(round==2)
 					Fk=64'hC6EF372FE94F82BE;
-				else if(round==3)
+				else if(round==3) begin
 					Fk=64'h54FF53A5F1D36F1C;
-				sx_comb=Fout^dx;
-				dx_comb=sx;		
-				if (round==3) begin
 					NS=idle;
-//					KA_comb={sx_comb,dx_comb};
 					valid_KA=1;
-				end							
+					end
+				sx_comb=Fout^dx;
+				dx_comb=sx;									
 				end
 			KA_middle_xor: begin
-				sx_comb=sx^in[0:63];
-				dx_comb=dx^in[64:127];
+				sx_comb=sx^KL_reg[0:63];
+				dx_comb=dx^KL_reg[64:127];
 				NS=KA_block;
 				round_comb=round;
 				end
@@ -129,6 +116,7 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 				sx_comb=in[0:63]^dual_K[0:63];
 				dx_comb=in[64:127]^dual_K[64:127];
 				NS=CD_block;
+				round_comb=round;
 				end
 			CD_block: begin
 				round_comb=round+1;
@@ -144,8 +132,8 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 			CD_FL: begin
 				FLX=sx;
 				IFLY=dx;
-				FLk=dual_K[0:63];
-				IFLk=dual_K[64:127];
+				FLk=(EncOrDec) ? dual_K[0:63] : dual_K[64:127];
+				IFLk=(EncOrDec) ? dual_K[64:127] : dual_K[0:63];
 				sx_comb=FLout;
 				dx_comb=IFLout;
 				NS=CD_block;
@@ -162,91 +150,110 @@ module Feistel_rand(init, in, out, next, KL, clk, valid);
 		endcase
 	end
 	
+	assign KA_15_sx={KA_reg[15:127],KA_reg[0:14]};
+	assign KL_15_sx={KL_reg[15:127],KL_reg[0:14]};
+	assign KA_15_dx={KA_reg[113:127],KA_reg[0:112]};
+	assign KL_15_dx={KL_reg[113:127],KL_reg[0:112]};
 	
-	//poi prova a usare una fuinction per evitare di scrivere sempre la stessa cosa
-	always_comb
+	assign KA_17_sx={KA_reg[17:127],KA_reg[0:16]};
+	assign KL_17_sx={KL_reg[17:127],KL_reg[0:16]};
+	assign KA_17_dx={KA_reg[111:127],KA_reg[0:110]};
+	assign KL_17_dx={KL_reg[111:127],KL_reg[0:110]};
+	
+	always@(posedge clk) 
+	begin
+		case(PS)
+			idle: begin
+				if (init) begin
+					KL_reg<=KL;
+					KA_reg<=0; end
+				else if (next) begin
+					KL_reg<=(EncOrDec) ? KL_reg : KL_17_dx;
+					KA_reg<=(EncOrDec) ? KA_reg : KA_17_dx; end
+				end
+			KA_block: begin
+				if (valid_KA)
+					KA_reg<={sx_comb,dx_comb};
+				else
+					KA_reg<=KA_reg;
+				end
+			CD_initial_xor: begin
+				KA_reg<=(EncOrDec) ? KA_reg : KA_17_dx;
+				KL_reg<=(EncOrDec) ? KL_15_sx : KL_reg;
+				end
+			CD_FL: begin
+			case (round)
+				6: begin
+					KA_reg<=(EncOrDec) ? KA_15_sx : KA_17_dx;
+					KL_reg<=(EncOrDec) ? KL_15_sx : KL_17_dx; end
+				12:	begin
+					KL_reg<=(EncOrDec) ? KL_17_sx : KL_15_dx;
+					KA_reg<=(EncOrDec) ? KA_17_sx : KA_15_dx; end
+				endcase
+			end
+			CD_block: begin
+			case (round)
+				1,5: begin
+					KA_reg<=(EncOrDec) ? KA_15_sx : KA_reg; 
+					KL_reg<=(EncOrDec) ? KL_reg : KL_17_dx;	end
+				8: begin
+					KA_reg<=(EncOrDec) ? KA_15_sx : KA_reg;
+					KL_reg<=(EncOrDec) ? KL_reg : KL_15_dx;	end
+				7: begin
+					KL_reg<=(EncOrDec) ? KL_15_sx : KL_reg;
+					KA_reg<=(EncOrDec) ? KA_reg : KA_15_dx; end						
+				3: begin
+					KL_reg<=(EncOrDec) ? KL_15_sx : KL_reg; 
+					KA_reg<=(EncOrDec) ? KA_reg : KA_17_dx; end		
+				9,13: begin
+					KL_reg<=(EncOrDec) ? KL_17_sx : KL_reg; 
+					KA_reg<=(EncOrDec) ? KA_reg : KA_15_dx; end	
+				11,15: begin
+					KA_reg<=(EncOrDec) ? KA_17_sx : KA_reg; 
+					KL_reg<=(EncOrDec) ? KL_reg : KL_15_dx; end	
+				default: begin
+					KA_reg<=KA_reg;
+					KL_reg<=KL_reg;
+				end		
+				endcase
+			end
+			default: begin
+				KA_reg<=KA_reg;
+				KL_reg<=KL_reg;
+				end
+		 endcase
+				
+	end
+	
+	always@(PS, KA_reg, KL_reg, round )
 	begin
 		single_K=0;
 		dual_K=0;
-		KA_comb=KA_reg;
-		KL_comb=KL_reg;
 		case (PS)
-			idle: begin
-				if (init)
-					KL_comb=in;
-				end
-			KA_block: begin
-				if (round==3)
-					KA_comb={sx_comb,dx_comb};
-				end
-			CD_initial_xor: begin
-					dual_K=KL_reg;
-					KL_comb={KL_reg[15:127],KL_reg[0:14]};
-					end
+			CD_initial_xor: 
+				dual_K=(EncOrDec) ? KL_reg : KA_reg;
 			CD_FL: begin
-				if (round==6) begin
-					dual_K=KA_reg;	
-					KA_comb={KA_reg[15:127],KA_reg[0:14]};
-					KL_comb={KL_reg[15:127],KL_reg[0:14]}; end
-				else if (round==12)	begin
-					dual_K=KL_reg;
-					KL_comb={KL_reg[17:127],KL_reg[0:16]};
-					KA_comb={KA_reg[17:127],KA_reg[0:16]}; end
-				end
-			CD_final_xor: begin
-				dual_K=KA_reg;
-				end
+			case (round)
+			6:
+				dual_K=(EncOrDec) ? KA_reg : KL_reg;	
+			12:
+				dual_K=(EncOrDec) ? KL_reg : KA_reg;
+				endcase
+			end
+			CD_final_xor: 
+				dual_K=(EncOrDec) ? KA_reg : KL_reg;
 			CD_block: begin
-				if (round==0)
-					single_K=KA_reg[0:63];
-				else if (round==1) begin
-					single_K=KA_reg[64:127];
-					KA_comb={KA_reg[15:127],KA_reg[0:14]}; end
-				else if (round==2)
-					single_K=KL_reg[0:63];
-				else if (round==3) begin
-					single_K=KL_reg[64:127];
-					KL_comb={KL_reg[15:127],KL_reg[0:14]}; end
-				else if (round==4)
-					single_K=KA_reg[0:63];
-				else if	(round==5) begin
-					single_K=KA_reg[64:127];
-					KA_comb={KA_reg[15:127],KA_reg[0:14]}; end
-				else if (round==6)
-					single_K=KL_reg[0:63];
-				else if (round==7) begin
-					single_K=KL_reg[64:127];
-					KL_comb={KL_reg[15:127],KL_reg[0:14]}; end		
-				else if (round==8) begin
-					single_K=KA_reg[0:63];	
-					KA_comb={KA_reg[15:127],KA_reg[0:14]}; end
-				else if (round==9) begin
-					single_K=KL_reg[64:127];
-					KL_comb={KL_reg[17:127],KL_reg[0:16]}; end	
-				else if (round==10)
-					single_K=KA_reg[0:63];
-				else if (round==11) begin
-					single_K=KA_reg[64:127];
-					KA_comb={KA_reg[17:127],KA_reg[0:16]}; end	
-				else if (round==12)
-					single_K=KL_reg[0:63];
-				else if (round==13) begin
-					single_K=KL_reg[64:127];
-					KL_comb={KL_reg[17:127],KL_reg[0:16]}; end	
-				else if (round==14)
-					single_K=KA_reg[0:63];
-				else if (round==15) begin
-					single_K=KA_reg[64:127];
-					KA_comb={KA_reg[17:127],KA_reg[0:16]}; end	
-				else if (round==16) 
-					single_K=KL_reg[0:63];
-				else if (round==17)
-					single_K=KL_reg[64:127];
-				end				
-			default: begin
-				KA_comb=KA_reg;
-				KL_comb=KL_reg;
-				end
+			case (round)
+			0,4,8,10,14:
+					single_K=(EncOrDec) ? KA_reg[0:63] : KL_reg[64:127];
+			1,5,11,15:
+					single_K=(EncOrDec) ? KA_reg[64:127] : KL_reg[0:63];
+			2,6,12,16:
+					single_K=(EncOrDec) ? KL_reg[0:63] : KA_reg[64:127];
+			3,7,9,13,17:
+					single_K=(EncOrDec) ? KL_reg[64:127] : KA_reg[0:63];
+				endcase
+			end			
 		 endcase
 	end
 	

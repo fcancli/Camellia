@@ -10,7 +10,8 @@ logic EncOrDec, rst, init, next, ready, valid;
 initial
 begin
 	clk<=0;
-	block=128'h0123456789abcdeffedcba9876543210;
+//	block=128'h0123456789abcdeffedcba9876543210;
+	block=128'h67673138549669730857065648eabe43;
 	key=128'h0123456789abcdeffedcba9876543210;
 	EncOrDec=0;
 	rst=0;

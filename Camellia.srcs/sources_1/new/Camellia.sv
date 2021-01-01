@@ -20,8 +20,7 @@ module Camellia_core(block, result, key, clk, EncOrDec, rst, init, next, ready, 
     logic [0:127] feist_out;
 //    logic [1:0] NS;
 //    logic [1:0] PS=0;
-    localparam idle=0, KA_generation=1, key_scheduling=2, data_random=3;
-    
+
     assign ready=ready_s;
     assign valid=valid_feist;
     assign result=feist_out;
@@ -89,6 +88,6 @@ module Camellia_core(block, result, key, clk, EncOrDec, rst, init, next, ready, 
     				    			 
 //    end
     
-	Feistel_rand feist(.init(init), .in(block), .out(feist_out), .next(next), .KL(key), .clk(clk), .valid(valid_feist));
+	Feistel_rand feist(.init(init), .in(block), .out(feist_out), .next(next), .KL(key), .clk(clk), .valid(valid_feist), .EncOrDec(EncOrDec));
     
 endmodule
