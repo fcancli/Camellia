@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 
-module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, rst);
+module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset_n);
 	input init;
 	input clk;
 	input [0:127] in;
@@ -11,7 +11,7 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, rst);
 	input EncOrDec;
 	output valid;
 	output ready;
-	input rst;
+	input reset_n;
 	
 	localparam idle=0;
 //stati per la generazione dell KA
@@ -60,7 +60,7 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, rst);
 	
 	always@(posedge clk)
 	begin
-		if (rst) begin
+		if (!reset_n) begin
 			sx<=0;
 			dx<=0;
 			round<=0;
@@ -135,18 +135,13 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, rst);
 		IFLk=0;
 		case (PS)
 			KA_block: begin
-				if (round==0) begin
-					Fk=64'hA09E667F3BCC908B; end
-				else if (round==1)
-				begin
-					Fk=64'hB67AE8584CAA73B2;
-				end
-				else if(round==2)
-					Fk=64'hC6EF372FE94F82BE;
-				else if(round==3) begin
-					Fk=64'h54FF53A5F1D36F1C;
-					end								
-				end
+				case (round)
+					0: Fk=64'hA09E667F3BCC908B;
+					1: Fk=64'hB67AE8584CAA73B2;
+					2: Fk=64'hC6EF372FE94F82BE;
+					3: Fk=64'h54FF53A5F1D36F1C;		
+				endcase
+			end
 			CD_block: begin
 				Fk=single_K;
 				end
