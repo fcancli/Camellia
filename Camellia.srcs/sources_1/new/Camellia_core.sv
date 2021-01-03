@@ -27,10 +27,10 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 	localparam NOP_KA=9;
 	
 
-	logic [3:0] PS=0, pipe_PS;
-	logic [4:0] round=0, pipe_round;
-	logic [0:63] sx, dx, pipe_sx, pipe_dx;
-	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout, pipe_Fout;
+	logic [3:0] PS=0;
+	logic [4:0] round=0;
+	logic [0:63] sx, dx;
+	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout;
 	logic [0:127] KA_reg=0;
 	logic [0:127] KL_reg=0, KL;
 	logic [0:127] KA_temp=0;
@@ -74,8 +74,6 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 		if (!reset_n) begin
 			sx<=0;
 			dx<=0;
-			pipe_sx<=0;
-			pipe_dx<=0;
 			round<=0;
 			PS<=idle;
 		end
@@ -83,7 +81,6 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 			idle: begin
 				valid_KA<=0;
 				round<=0;
-				pipe_round<=0;
 				if (init)
 				begin 
 					PS<=KA_block; 
