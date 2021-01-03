@@ -1,11 +1,11 @@
 `timescale 1ns / 1ps
 
 
-module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset_n);
+module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, reset_n);
 	input init;
 	input clk;
 	input [0:127] in;
-	input [0:127] KL;
+	input [0:255] KL_long;
 	output [0:127] out;
 	input next;   //input key per i round blocks
 	input EncOrDec;
@@ -30,7 +30,7 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset
 	logic [0:63] sx, dx;
 	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout;
 	logic [0:127] KA_reg=0;
-	logic [0:127] KL_reg=0;
+	logic [0:127] KL_reg=0, KL;
 	logic [0:127] KA_temp=0;
 	logic [0:127] KL_temp=0;
 	logic [0:127] KA_15_sx, KA_15_dx, KA_17_sx, KA_17_dx;
@@ -44,6 +44,7 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset
 	
 	assign valid =valid_reg;
 	assign ready=ready_s;
+	assign KL=KL_long[0:127];
 	
 	always@(posedge clk)
 	begin
@@ -60,29 +61,35 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset
 	
 	always@(posedge clk)
 	begin
+		if (PS==idle)
+			ready_s<=1;
+		else
+			ready_s<=0;			
+	end
+	
+	always@(posedge clk)
+	begin
 		if (!reset_n) begin
 			sx<=0;
 			dx<=0;
 			round<=0;
 			PS<=idle;
-			ready_s<=0;
 		end
 		case (PS)
 			idle: begin
 				valid_KA<=0;
-				ready_s<=1;
 				round<=0;
 				if (init)
 				begin 
 					PS<=KA_block; 
 					sx<=KL[0:63]; 
 					dx<=KL[64:127]; 
-					ready_s<=0;
 				end
 				if (next)
 				begin
+					sx<=in[0:63];
+					dx<=in[64:127];
 					PS<=CD_initial_xor;
-					ready_s<=0;
 				end
 				end
 			KA_block: begin
@@ -102,8 +109,10 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset
 				PS<=KA_block;
 				end
 			CD_initial_xor: begin
-				sx<=in[0:63]^dual_K[0:63];
-				dx<=in[64:127]^dual_K[64:127];
+				sx<=sx^dual_K[0:63];
+				dx<=dx^dual_K[64:127];
+//				sx<=in[0:63]^dual_K[0:63];
+//				dx<=in[64:127]^dual_K[64:127];
 				PS<=CD_block;
 				end
 			CD_block: begin
@@ -125,9 +134,10 @@ module Camellia_core(init, in, out, next, KL, clk, valid, EncOrDec, ready, reset
 				dx<=sx^dual_K[64:127];
 				PS<=idle;
 				end						
-		endcase
-			
+		endcase			
 	end
+	
+	
 	always@(PS, round, dual_K, single_K, EncOrDec)
 	begin
 		Fk='0;

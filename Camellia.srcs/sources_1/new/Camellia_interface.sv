@@ -106,7 +106,7 @@ module Camellia_interface(
   //----------------------------------------------------------------
   // core instantiation.
   //----------------------------------------------------------------
-Camellia_core core(.init(core_init), .in(core_block), .out(core_result), .next(core_next), .KL(core_key[255:128]), .clk(clk), .valid(core_valid), .EncOrDec(core_encdec), .ready(core_ready), .reset_n(reset_n));
+Camellia_core core(.init(core_init), .in(core_block), .out(core_result), .next(core_next), .KL_long(core_key), .clk(clk), .valid(core_valid), .EncOrDec(core_encdec), .ready(core_ready), .reset_n(reset_n));
 
   //----------------------------------------------------------------
   // reg_update

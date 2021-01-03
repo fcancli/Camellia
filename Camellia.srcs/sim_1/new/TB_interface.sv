@@ -112,7 +112,7 @@ module tb_camellia_interface();
 
       if (DEBUG)
         begin
-          dump_dut_state();
+//          dump_dut_state();
         end
     end
 
@@ -122,21 +122,21 @@ module tb_camellia_interface();
   //
   // Dump the state of the dump when needed.
   //----------------------------------------------------------------
-  task dump_dut_state;
-    begin
-      $display("cycle: 0x%016x", cycle_ctr);
-      $display("State of DUT");
-      $display("------------");
-      $display("ctrl_reg:   init   = 0x%01x, next   = 0x%01x", dut.init_reg, dut.next_reg);
-      $display("config_reg: encdec = 0x%01x, length = 0x%01x ", dut.encdec_reg, dut.keylen_reg);
-      $display("");
+//  task dump_dut_state;
+//    begin
+//      $display("cycle: 0x%016x", cycle_ctr);
+//      $display("State of DUT");
+//      $display("------------");
+//      $display("ctrl_reg:   init   = 0x%01x, next   = 0x%01x", dut.init_reg, dut.next_reg);
+//      $display("config_reg: encdec = 0x%01x, length = 0x%01x ", dut.encdec_reg, dut.keylen_reg);
+//      $display("");
 
-      $display("block: 0x%08x, 0x%08x, 0x%08x, 0x%08x",
-               dut.block_reg[0], dut.block_reg[1], dut.block_reg[2], dut.block_reg[3]);
-      $display("");
+//      $display("block: 0x%08x, 0x%08x, 0x%08x, 0x%08x",
+//               dut.block_reg[0], dut.block_reg[1], dut.block_reg[2], dut.block_reg[3]);
+//      $display("");
 
-    end
-  endtask // dump_dut_state
+//    end
+//  endtask // dump_dut_state
 
 
   //----------------------------------------------------------------
@@ -149,7 +149,7 @@ module tb_camellia_interface();
       $display("*** Toggle reset.");
       tb_reset_n = 0;
 
-      #(2 * CLK_PERIOD);
+      #(10 * CLK_PERIOD);
       tb_reset_n = 1;
       $display("");
     end
@@ -339,7 +339,7 @@ module tb_camellia_interface();
 
       init_key(key, key_length);
       write_block(block);
-      dump_dut_state();
+//      dump_dut_state();
 
       write_word(ADDR_CONFIG, (8'h00 + (key_length << 1)+ encdec));
       write_word(ADDR_CTRL, 8'h02);
@@ -481,10 +481,10 @@ module tb_camellia_interface();
       $display("");
 
       init_sim();
-      dump_dut_state();
+//      dump_dut_state();
       reset_dut();
-      dump_dut_state();
-
+//      dump_dut_state();
+//	  #(5*CLK_PERIOD)
       aes_test();
 
       display_test_results();
