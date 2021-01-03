@@ -25,10 +25,10 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 	localparam CD_final_xor=7;
 	
 
-	logic [2:0] PS=0;
-	logic [4:0] round=0;
-	logic [0:63] sx, dx;
-	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout;
+	logic [2:0] PS=0, pipe_PS;
+	logic [4:0] round=0, pipe_round;
+	logic [0:63] sx, dx, pipe_sx, pipe_dx;
+	logic [0:63] FX,Fk,Fout,FLX,FLk,FLout,IFLY,IFLk,IFLout, pipe_Fout;
 	logic [0:127] KA_reg=0;
 	logic [0:127] KL_reg=0, KL;
 	logic [0:127] KA_temp=0;
@@ -69,13 +69,20 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 	
 	always@(posedge clk)
 	begin
+		pipe_Fout<=Fout;
+		pipe_PS<=PS;
+		pipe_round<=round;
+	end
+	
+	always@(posedge clk)
+	begin
 		if (!reset_n) begin
 			sx<=0;
 			dx<=0;
 			round<=0;
 			PS<=idle;
 		end
-		case (PS)
+		case (pipe_PS)
 			idle: begin
 				valid_KA<=0;
 				round<=0;
@@ -94,13 +101,13 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				end
 			KA_block: begin
 				round<=round+1;
-				if (round==1)
+				if (pipe_round==1)
 					PS<=KA_middle_xor;
-				if (round==3) begin
+				if (pipe_round==3) begin
 					PS<=idle;
 					valid_KA<=1;
 				end
-				sx<=Fout^dx;
+				sx<=pipe_Fout^dx;
 				dx<=sx;	
 				end	
 			KA_middle_xor: begin
@@ -117,11 +124,11 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				end
 			CD_block: begin
 				round<=round+1;
-				if (round==5 || round==11)
+				if (pipe_round==5 || pipe_round==11)
 					PS<=CD_FL;		
-				if (round==17)	
+				if (pipe_round==17)	
 					PS<=CD_final_xor;
-				sx<=Fout^dx;
+				sx<=pipe_Fout^dx;
 				dx<=sx;	
 				end
 			CD_FL: begin
@@ -138,14 +145,14 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 	end
 	
 	
-	always@(PS, round, dual_K, single_K, EncOrDec)
+	always@(pipe_PS, pipe_round, dual_K, single_K, EncOrDec)
 	begin
 		Fk='0;
 		FLk='0;
 		IFLk=0;
-		case (PS)
+		case (pipe_PS)
 			KA_block: begin
-				case (round)
+				case (pipe_round)
 					0: Fk=64'hA09E667F3BCC908B;
 					1: Fk=64'hB67AE8584CAA73B2;
 					2: Fk=64'hC6EF372FE94F82BE;
@@ -190,7 +197,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 	
 	always@(posedge clk) 
 	begin
-		case(PS)
+		case(pipe_PS)
 			idle: begin				
 				if (next) begin
 					KL_temp<=(EncOrDec) ? KL_reg : {KL_reg[111:127],KL_reg[0:110]};;
@@ -201,7 +208,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				KL_temp<=(EncOrDec) ? KL_15_sx : KL_temp;
 				end
 			CD_FL: begin
-			case (round)
+			case (pipe_round)
 				6: begin
 					KA_temp<=(EncOrDec) ? KA_15_sx : KA_17_dx;
 					KL_temp<=(EncOrDec) ? KL_15_sx : KL_17_dx; end
@@ -211,7 +218,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				endcase
 			end
 			CD_block: begin
-			case (round)
+			case (pipe_round)
 				1,5: begin
 					KA_temp<=(EncOrDec) ? KA_15_sx : KA_temp; 
 					KL_temp<=(EncOrDec) ? KL_temp : KL_17_dx;	end
@@ -244,15 +251,15 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				
 	end
 	
-	always@(PS, KA_temp, KL_temp, round, EncOrDec )
+	always@(pipe_PS, KA_temp, KL_temp, pipe_round, EncOrDec )
 	begin
 		single_K=0;
 		dual_K=0;
-		case (PS)
+		case (pipe_PS)
 			CD_initial_xor: 
 				dual_K=(EncOrDec) ? KL_temp : KA_temp;
 			CD_FL: begin
-			case (round)
+			case (pipe_round)
 			6:
 				dual_K=(EncOrDec) ? KA_temp : KL_temp;	
 			12:
@@ -262,7 +269,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 			CD_final_xor: 
 				dual_K=(EncOrDec) ? KA_temp : KL_temp;
 			CD_block: begin
-			case (round)
+			case (pipe_round)
 			0,4,8,10,14:
 					single_K=(EncOrDec) ? KA_temp[0:63] : KL_temp[64:127];
 			1,5,11,15:
