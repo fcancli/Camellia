@@ -99,19 +99,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				end
 			KA_block: begin
 				round<=round+1;
-//				if (round==3)
-//					PS<=KA_middle_xor;
-//				if (round==7) begin
-//					PS<=idle;
-//					valid_KA<=1;
-//				end
-				pipe_sx<=Fout^dx;
-//				sx<=pipe_sx;
-				pipe_dx<=sx;
 				PS<=NOP_KA;
-//				dx<=pipe_dx;
-//				sx<=pipe_Fout^dx;
-//				dx<=sx;	
 				end	
 			KA_middle_xor: begin
 				sx<=sx^KL_reg[0:63];
@@ -121,23 +109,11 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 			CD_initial_xor: begin
 				sx<=sx^dual_K[0:63];
 				dx<=dx^dual_K[64:127];
-//				sx<=in[0:63]^dual_K[0:63];
-//				dx<=in[64:127]^dual_K[64:127];
 				PS<=CD_block;
 				end
 			CD_block: begin
 				round<=round+1;
-//				if (round==5 || round==11)
-//					PS<=CD_FL;		
-//				if (round==17)	
-//					PS<=CD_final_xor;
-				pipe_sx<=Fout^dx;
-//				sx<=pipe_sx;
-				pipe_dx<=sx;
-//				dx<=pipe_dx;
 				PS<=NOP;
-//				sx<=Fout^dx;
-//				dx<=sx;	
 				end
 			CD_FL: begin
 				sx<=FLout;
@@ -155,10 +131,12 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 					PS<=CD_FL;		
 				else if (round==18)	
 					PS<=CD_final_xor;	
-				sx<=pipe_sx;
-				dx<=pipe_dx;
+				sx<=Fout^dx;
+				dx<=sx;	
 				end		
 			NOP_KA: begin
+				sx<=Fout^dx;
+				dx<=sx;	
 				PS<=KA_block;
 				if (round==2)
 					PS<=KA_middle_xor;
@@ -166,8 +144,6 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 					PS<=idle;
 					valid_KA<=1;
 				end
-				sx<=pipe_sx;
-				dx<=pipe_dx;
 				end	
 		endcase			
 	end
@@ -313,7 +289,7 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 		endcase		
 	end
 	
-	F_function f(.X(FX), .k(Fk), .out(Fout));
+	F_function f(.X(FX), .k(Fk), .out(Fout), .clk(clk));
 	FL_function fl(.X(FLX), .k(FLk), .out(FLout));
 	invFL_function ifl(.Y(IFLY), .k(IFLk), .out(IFLout));
 endmodule
