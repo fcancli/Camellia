@@ -130,9 +130,9 @@ module Camellia_core(init, in, out, next, KL_long, clk, valid, EncOrDec, ready, 
 				end
 			CD_block: begin
 				round<=round+1;
-				if (round==11 || round==21)
+				if (round==11 || round==23)
 					PS<=CD_FL;		
-				if (round==35)	
+				if (round==36)	
 					PS<=CD_final_xor;
 				pipe_sx<=Fout^dx;
 				sx<=pipe_sx;
