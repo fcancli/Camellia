@@ -5,7 +5,6 @@ module tb_camellia_interface();
   //----------------------------------------------------------------
   // Internal constant and parameter definitions.
   //----------------------------------------------------------------
-  parameter DEBUG     = 0;
 
   parameter CLK_HALF_PERIOD = 5;
   parameter CLK_PERIOD      = 2 * CLK_HALF_PERIOD;
@@ -109,34 +108,9 @@ module tb_camellia_interface();
       cycle_ctr = cycle_ctr + 1;
 
       #(CLK_PERIOD);
-
-      if (DEBUG)
-        begin
-//          dump_dut_state();
-        end
     end
 
 
-  //----------------------------------------------------------------
-  // dump_dut_state()
-  //
-  // Dump the state of the dump when needed.
-  //----------------------------------------------------------------
-//  task dump_dut_state;
-//    begin
-//      $display("cycle: 0x%016x", cycle_ctr);
-//      $display("State of DUT");
-//      $display("------------");
-//      $display("ctrl_reg:   init   = 0x%01x, next   = 0x%01x", dut.init_reg, dut.next_reg);
-//      $display("config_reg: encdec = 0x%01x, length = 0x%01x ", dut.encdec_reg, dut.keylen_reg);
-//      $display("");
-
-//      $display("block: 0x%08x, 0x%08x, 0x%08x, 0x%08x",
-//               dut.block_reg[0], dut.block_reg[1], dut.block_reg[2], dut.block_reg[3]);
-//      $display("");
-
-//    end
-//  endtask // dump_dut_state
 
 
   //----------------------------------------------------------------
@@ -207,12 +181,6 @@ module tb_camellia_interface();
   task write_word(input [11 : 0] address,
                   input [31 : 0] word);
     begin
-      if (DEBUG)
-        begin
-          $display("*** Writing 0x%08x to 0x%02x.", word, address);
-          $display("");
-        end
-
       tb_address = address;
       tb_write_data = word;
       tb_cs = 1;
@@ -254,12 +222,6 @@ module tb_camellia_interface();
       #(CLK_PERIOD);
       read_data = tb_read_data;
       tb_cs = 0;
-
-      if (DEBUG)
-        begin
-          $display("*** Reading 0x%08x from 0x%02x.", read_data, address);
-          $display("");
-        end
     end
   endtask // read_word
 
@@ -291,11 +253,6 @@ module tb_camellia_interface();
   //----------------------------------------------------------------
   task init_key(input [255 : 0] key, input key_length);
     begin
-      if (DEBUG)
-        begin
-          $display("key length: 0x%01x", key_length);
-          $display("Initializing key expansion for key: 0x%016x", key);
-        end
 
       write_word(ADDR_KEY0, key[255  : 224]);
       write_word(ADDR_KEY1, key[223  : 192]);
@@ -327,7 +284,7 @@ module tb_camellia_interface();
   //
   // Perform ECB mode encryption or decryption single block test.
   //----------------------------------------------------------------
-  task ecb_mode_single_block_test(input [7 : 0]   tc_number,
+  task single_block_test(input [7 : 0]   tc_number,
                                   input           encdec,
                                   input [255 : 0] key,
                                   input           key_length,
@@ -339,7 +296,6 @@ module tb_camellia_interface();
 
       init_key(key, key_length);
       write_block(block);
-//      dump_dut_state();
 
       write_word(ADDR_CONFIG, (8'h00 + (key_length << 1)+ encdec));
       write_word(ADDR_CTRL, 8'h02);
@@ -372,98 +328,60 @@ module tb_camellia_interface();
   // Main test task will perform complete NIST test of AES.
   //----------------------------------------------------------------
   task aes_test;
-    reg [255 : 0] nist_aes128_key;
-    reg [255 : 0] nist_aes256_key;
+    reg [255 : 0] camellia_128_key;
 
-    reg [127 : 0] nist_plaintext0;
-    reg [127 : 0] nist_plaintext1;
-    reg [127 : 0] nist_plaintext2;
-    reg [127 : 0] nist_plaintext3;
+    reg [127 : 0] plaintext0;
+    reg [127 : 0] plaintext1;
+    reg [127 : 0] plaintext2;
+    reg [127 : 0] plaintext3;
 
-    reg [127 : 0] nist_ecb_128_enc_expected0;
-    reg [127 : 0] nist_ecb_128_enc_expected1;
-    reg [127 : 0] nist_ecb_128_enc_expected2;
-    reg [127 : 0] nist_ecb_128_enc_expected3;
+    reg [127 : 0] enc_128_expected0;
+    reg [127 : 0] enc_128_expected1;
+    reg [127 : 0] enc_128_expected2;
+    reg [127 : 0] enc_128_expected3;
 
-//    reg [127 : 0] nist_ecb_256_enc_expected0;
-//    reg [127 : 0] nist_ecb_256_enc_expected1;
-//    reg [127 : 0] nist_ecb_256_enc_expected2;
-//    reg [127 : 0] nist_ecb_256_enc_expected3;
 
     begin
-      nist_aes128_key = 256'hFEDCBA98765432100123456789ABCDEF00000000000000000000000000000000;
-//      nist_aes256_key = 256'h603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4;
+      camellia_128_key = 256'hFEDCBA98765432100123456789ABCDEF00000000000000000000000000000000;
 
-      nist_plaintext0 = 128'h00000000000000000000000000040000;
-      nist_plaintext1 = 128'h00000000000000000000000000008000;
-      nist_plaintext2 = 128'h00000000000000000000000000004000;
-      nist_plaintext3 = 128'h00000000000000000000000000002000;
+      plaintext0 = 128'h00000000000000000000000000040000;
+      plaintext1 = 128'h00000000000000000000000000008000;
+      plaintext2 = 128'h00000000000000000000000000004000;
+      plaintext3 = 128'h00000000000000000000000000002000;
 
-      nist_ecb_128_enc_expected0 = 128'hE9F1FEB03648C01C0F3BBD8749094395;
-      nist_ecb_128_enc_expected1 = 128'h4D73D3048D85C10557DD0170D910F393;
-      nist_ecb_128_enc_expected2 = 128'h9D031BC46ACDD2FBB009C2D2AF06D66A;
-      nist_ecb_128_enc_expected3 = 128'h7DC1AA8EB13C4130F7F63CFDEAA0A670;
-
-//      nist_ecb_256_enc_expected0 = 128'hf3eed1bdb5d2a03c064b5a7e3db181f8;
-//      nist_ecb_256_enc_expected1 = 128'h591ccb10d410ed26dc5ba74a31362870;
-//      nist_ecb_256_enc_expected2 = 128'hb6ed21b99ca6f4f9f153e7b1beafed1d;
-//      nist_ecb_256_enc_expected3 = 128'h23304b7a39f9f3ff067d8d8f9e24ecc7;
+      enc_128_expected0 = 128'hE9F1FEB03648C01C0F3BBD8749094395;
+      enc_128_expected1 = 128'h4D73D3048D85C10557DD0170D910F393;
+      enc_128_expected2 = 128'h9D031BC46ACDD2FBB009C2D2AF06D66A;
+      enc_128_expected3 = 128'h7DC1AA8EB13C4130F7F63CFDEAA0A670;
 
 
       $display("ECB 128 bit key tests");
       $display("---------------------");
-      ecb_mode_single_block_test(8'h01, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_plaintext0, nist_ecb_128_enc_expected0);
+     single_block_test(8'h01, AES_ENCIPHER, camellia_128_key, AES_128_BIT_KEY,
+                       plaintext0, enc_128_expected0);
 
-      ecb_mode_single_block_test(8'h02, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                nist_plaintext1, nist_ecb_128_enc_expected1);
+     single_block_test(8'h02, AES_ENCIPHER, camellia_128_key, AES_128_BIT_KEY,
+                      plaintext1, enc_128_expected1);
 
-      ecb_mode_single_block_test(8'h03, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_plaintext2, nist_ecb_128_enc_expected2);
+     single_block_test(8'h03, AES_ENCIPHER, camellia_128_key, AES_128_BIT_KEY,
+                       plaintext2,enc_128_expected2);
 
-      ecb_mode_single_block_test(8'h04, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_plaintext3, nist_ecb_128_enc_expected3);
-
-
-      ecb_mode_single_block_test(8'h05, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_ecb_128_enc_expected0, nist_plaintext0);
-
-      ecb_mode_single_block_test(8'h06, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_ecb_128_enc_expected1, nist_plaintext1);
-
-      ecb_mode_single_block_test(8'h07, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_ecb_128_enc_expected2, nist_plaintext2);
-
-      ecb_mode_single_block_test(8'h08, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-                                 nist_ecb_128_enc_expected3, nist_plaintext3);
-
-//      $display("");
-//      $display("ECB 256 bit key tests");
-//      $display("---------------------");
-//      ecb_mode_single_block_test(8'h10, AES_ENCIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_plaintext0, nist_ecb_256_enc_expected0);
-
-//      ecb_mode_single_block_test(8'h11, AES_ENCIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_plaintext1, nist_ecb_256_enc_expected1);
-
-//      ecb_mode_single_block_test(8'h12, AES_ENCIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_plaintext2, nist_ecb_256_enc_expected2);
-
-//      ecb_mode_single_block_test(8'h13, AES_ENCIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_plaintext3, nist_ecb_256_enc_expected3);
+     single_block_test(8'h04, AES_ENCIPHER, camellia_128_key, AES_128_BIT_KEY,
+                       plaintext3, enc_128_expected3);
 
 
-//      ecb_mode_single_block_test(8'h14, AES_DECIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_ecb_256_enc_expected0, nist_plaintext0);
+     single_block_test(8'h05, AES_DECIPHER, camellia_128_key, AES_128_BIT_KEY,
+                      enc_128_expected0, plaintext0);
 
-//      ecb_mode_single_block_test(8'h15, AES_DECIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_ecb_256_enc_expected1, nist_plaintext1);
+     single_block_test(8'h06, AES_DECIPHER, camellia_128_key, AES_128_BIT_KEY,
+                       enc_128_expected1, plaintext1);
 
-//      ecb_mode_single_block_test(8'h16, AES_DECIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_ecb_256_enc_expected2, nist_plaintext2);
+     single_block_test(8'h07, AES_DECIPHER, camellia_128_key, AES_128_BIT_KEY,
+                       enc_128_expected2, plaintext2);
 
-//      ecb_mode_single_block_test(8'h17, AES_DECIPHER, nist_aes256_key, AES_256_BIT_KEY,
-//                                 nist_ecb_256_enc_expected3, nist_plaintext3);
+     single_block_test(8'h08, AES_DECIPHER, camellia_128_key, AES_128_BIT_KEY,
+                                 enc_128_expected3, plaintext3);
+
     end
   endtask // aes_test
 
@@ -480,10 +398,7 @@ module tb_camellia_interface();
       $display("");
 
       init_sim();
-//      dump_dut_state();
       reset_dut();
-//      dump_dut_state();
-//	  #(5*CLK_PERIOD)
       aes_test();
 
       display_test_results();
