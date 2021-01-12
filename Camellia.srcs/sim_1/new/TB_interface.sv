@@ -376,14 +376,14 @@ module tb_camellia_interface();
     reg [255 : 0] nist_aes256_key;
 
     reg [127 : 0] nist_plaintext0;
-//    reg [127 : 0] nist_plaintext1;
-//    reg [127 : 0] nist_plaintext2;
-//    reg [127 : 0] nist_plaintext3;
+    reg [127 : 0] nist_plaintext1;
+    reg [127 : 0] nist_plaintext2;
+    reg [127 : 0] nist_plaintext3;
 
     reg [127 : 0] nist_ecb_128_enc_expected0;
-//    reg [127 : 0] nist_ecb_128_enc_expected1;
-//    reg [127 : 0] nist_ecb_128_enc_expected2;
-//    reg [127 : 0] nist_ecb_128_enc_expected3;
+    reg [127 : 0] nist_ecb_128_enc_expected1;
+    reg [127 : 0] nist_ecb_128_enc_expected2;
+    reg [127 : 0] nist_ecb_128_enc_expected3;
 
 //    reg [127 : 0] nist_ecb_256_enc_expected0;
 //    reg [127 : 0] nist_ecb_256_enc_expected1;
@@ -391,18 +391,18 @@ module tb_camellia_interface();
 //    reg [127 : 0] nist_ecb_256_enc_expected3;
 
     begin
-      nist_aes128_key = 256'h0123456789abcdeffedcba987654321000000000000000000000000000000000;
-      nist_aes256_key = 256'h603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4;
+      nist_aes128_key = 256'hFEDCBA98765432100123456789ABCDEF00000000000000000000000000000000;
+//      nist_aes256_key = 256'h603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4;
 
-      nist_plaintext0 = 128'h0123456789abcdeffedcba9876543210;
-//      nist_plaintext1 = 128'hae2d8a571e03ac9c9eb76fac45af8e51;
-//      nist_plaintext2 = 128'h30c81c46a35ce411e5fbc1191a0a52ef;
-//      nist_plaintext3 = 128'hf69f2445df4f9b17ad2b417be66c3710;
+      nist_plaintext0 = 128'h00000000000000000000000000040000;
+      nist_plaintext1 = 128'h00000000000000000000000000008000;
+      nist_plaintext2 = 128'h00000000000000000000000000004000;
+      nist_plaintext3 = 128'h00000000000000000000000000002000;
 
-      nist_ecb_128_enc_expected0 = 128'h67673138549669730857065648eabe43;
-//      nist_ecb_128_enc_expected1 = 128'hf5d3d58503b9699de785895a96fdbaaf;
-//      nist_ecb_128_enc_expected2 = 128'h43b1cd7f598ece23881b00e3ed030688;
-//      nist_ecb_128_enc_expected3 = 128'h7b0c785e27e8ad3f8223207104725dd4;
+      nist_ecb_128_enc_expected0 = 128'hE9F1FEB03648C01C0F3BBD8749094395;
+      nist_ecb_128_enc_expected1 = 128'h4D73D3048D85C10557DD0170D910F393;
+      nist_ecb_128_enc_expected2 = 128'h9D031BC46ACDD2FBB009C2D2AF06D66A;
+      nist_ecb_128_enc_expected3 = 128'h7DC1AA8EB13C4130F7F63CFDEAA0A670;
 
 //      nist_ecb_256_enc_expected0 = 128'hf3eed1bdb5d2a03c064b5a7e3db181f8;
 //      nist_ecb_256_enc_expected1 = 128'h591ccb10d410ed26dc5ba74a31362870;
@@ -415,28 +415,27 @@ module tb_camellia_interface();
       ecb_mode_single_block_test(8'h01, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
                                  nist_plaintext0, nist_ecb_128_enc_expected0);
 
-//      ecb_mode_single_block_test(8'h02, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                nist_plaintext1, nist_ecb_128_enc_expected1);
+      ecb_mode_single_block_test(8'h02, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                nist_plaintext1, nist_ecb_128_enc_expected1);
 
-//      ecb_mode_single_block_test(8'h03, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                 nist_plaintext2, nist_ecb_128_enc_expected2);
+      ecb_mode_single_block_test(8'h03, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                 nist_plaintext2, nist_ecb_128_enc_expected2);
 
-//      ecb_mode_single_block_test(8'h04, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                 nist_plaintext3, nist_ecb_128_enc_expected3);
+      ecb_mode_single_block_test(8'h04, AES_ENCIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                 nist_plaintext3, nist_ecb_128_enc_expected3);
 
 
       ecb_mode_single_block_test(8'h05, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
                                  nist_ecb_128_enc_expected0, nist_plaintext0);
 
-//      ecb_mode_single_block_test(8'h06, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                 nist_ecb_128_enc_expected1, nist_plaintext1);
+      ecb_mode_single_block_test(8'h06, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                 nist_ecb_128_enc_expected1, nist_plaintext1);
 
-//      ecb_mode_single_block_test(8'h07, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                 nist_ecb_128_enc_expected2, nist_plaintext2);
+      ecb_mode_single_block_test(8'h07, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                 nist_ecb_128_enc_expected2, nist_plaintext2);
 
-//      ecb_mode_single_block_test(8'h08, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
-//                                 nist_ecb_128_enc_expected3, nist_plaintext3);
-
+      ecb_mode_single_block_test(8'h08, AES_DECIPHER, nist_aes128_key, AES_128_BIT_KEY,
+                                 nist_ecb_128_enc_expected3, nist_plaintext3);
 
 //      $display("");
 //      $display("ECB 256 bit key tests");
